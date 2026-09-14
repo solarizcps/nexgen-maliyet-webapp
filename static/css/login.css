@@ -1,0 +1,10 @@
+.login-body{background:linear-gradient(160deg,#24546f,#2e6c8e 40%,#f4f6f9);min-height:100vh;display:grid;place-items:center;padding:24px}
+.login-wrap{width:100%;max-width:400px}
+.login-card{background:#fff;border-radius:14px;padding:28px 26px 24px;box-shadow:0 16px 48px #17354a33;border-top:6px solid #f4c542}
+.login-brand img{width:140px;display:block;margin:0 auto 12px}
+.login-card h1{margin:0;text-align:center;font-size:22px;color:#17394d}
+.login-sub{text-align:center;color:#6b7782;margin:6px 0 22px;font-size:13px}
+.login-card label{display:block;margin-bottom:14px;color:#425666;font-size:12px;font-weight:650}
+.login-card input{display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #cdd7de;border-radius:8px;font-size:15px}
+.login-btn{width:100%;margin-top:6px;padding:12px;font-size:15px}
+.login-error{background:#fde8e8;border:1px solid #e8aaaa;color:#7a1212;padding:10px 12px;border-radius:8px;margin-bottom:10px;font-size:13px;font-weight:650}

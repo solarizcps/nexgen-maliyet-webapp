@@ -6,10 +6,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.environ.get("NEXGEN_DB_PATH") or os.path.join(DATA_DIR, "nexgen_local.db")
 SCHEMA_PATH = os.path.join(BASE_DIR, "db", "schema.sql")
-IMPORT_SOURCE = os.path.join(
-    BASE_DIR, "..", "backup", "localstorage_real_user.json"
+_FIXTURE_IMPORT = os.path.join(BASE_DIR, "tests", "fixtures", "localstorage_seed.json")
+_LEGACY_IMPORT = os.path.join(BASE_DIR, "..", "backup", "localstorage_real_user.json")
+IMPORT_SOURCE = os.environ.get("NEXGEN_IMPORT_SOURCE") or (
+    _LEGACY_IMPORT if os.path.exists(_LEGACY_IMPORT) else _FIXTURE_IMPORT
 )
-BACKUP_DIR = os.path.join(BASE_DIR, "..", "backup")
+BACKUP_DIR = os.path.join(BASE_DIR, "backup")
 SECRET_KEY_FILE = os.environ.get("NEXGEN_SECRET_FILE") or os.path.join(
     DATA_DIR, ".nexgen_secret"
 )

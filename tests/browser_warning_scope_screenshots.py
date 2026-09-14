@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Browser screenshots for kg save fix (local server required)."""
+"""Browser verification for active-formula warning scope."""
 import base64
 import json
 import os
@@ -12,6 +12,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from tests.test_helpers import browser_login_eval_script
+import config
 
 try:
     import websocket
@@ -19,12 +20,11 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "websocket-client", "-q"])
     import websocket
 
-PORT = int(os.environ.get("NEXGEN_TEST_PORT", "2345"))
-BASE = f"http://127.0.0.1:{PORT}"
-SHOT = os.path.join(ROOT, "screenshots_kg_save_fix")
-CDP_PORT = 9234
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-PROFILE = os.path.join(os.environ.get("TEMP", "."), "nexgen-kg-save-shots")
+BASE = f"http://{config.HOST}:{config.PORT}"
+SHOT = os.path.join(ROOT, "screenshots_warning_scope")
+CDP_PORT = 9232
+PROFILE = os.path.join(os.environ.get("TEMP", "."), "nexgen-warn-scope-shots")
 
 
 class CDP:
@@ -40,7 +40,9 @@ class CDP:
             if msg.get("id") == 1:
                 return msg.get("result", {}).get("result", {}).get("value")
 
-    def shot(self, name):
+    def shot(self, name, w=1366, h=768):
+        self.ws.send(json.dumps({"id": 3, "method": "Emulation.setDeviceMetricsOverride", "params": {"width": w, "height": h, "deviceScaleFactor": 1, "mobile": False}}))
+        time.sleep(0.15)
         self.ws.send(json.dumps({"id": 2, "method": "Page.captureScreenshot", "params": {"format": "png"}}))
         while True:
             msg = json.loads(self.ws.recv())
@@ -55,8 +57,14 @@ class CDP:
         self.ws.close()
 
 
+def pick_formula(cdp, fid):
+    cdp.eval("document.getElementById('calcFormula').value='%s';document.getElementById('calcFormula').dispatchEvent(new Event('change'))" % fid)
+    time.sleep(1.2)
+
+
 def main():
     os.makedirs(SHOT, exist_ok=True)
+    paths = []
     edge = subprocess.Popen(
         [EDGE, f"--remote-debugging-port={CDP_PORT}", "--remote-allow-origins=*", f"--user-data-dir={PROFILE}", BASE + "/login"],
         stdout=subprocess.DEVNULL,
@@ -64,32 +72,36 @@ def main():
     )
     time.sleep(3)
     cdp = CDP()
-    paths = []
+    report = {}
     try:
         cdp.eval(browser_login_eval_script())
         for _ in range(40):
             time.sleep(0.25)
             if cdp.eval("!!window.__nx && window.__nx.loadState==='ready'"):
                 break
+        pick_formula(cdp, "neo-taban")
+        report["neo_banner_hidden"] = cdp.eval("document.getElementById('calcError').hidden")
+        report["neo_banner_text"] = cdp.eval("document.getElementById('calcError').innerText")
+        report["neo_missing_count"] = cdp.eval("window.__nx.formulaMissingCount(window.__nx.committed.formulas.find(f=>f.id==='neo-taban'), window.__nx.committed)")
+        paths.append(cdp.shot("01_neo_no_global_banner.png"))
+        pick_formula(cdp, "dakirs")
+        report["dakirs_banner"] = cdp.eval("document.getElementById('calcError').innerText")
+        report["dakirs_missing_count"] = cdp.eval("window.__nx.formulaMissingCount(window.__nx.committed.formulas.find(f=>f.id==='dakirs'), window.__nx.committed)")
+        paths.append(cdp.shot("02_dakirs_only_warnings.png"))
+        pick_formula(cdp, "wanderfull")
+        report["wanderfull_banner"] = cdp.eval("document.getElementById('calcError').innerText")
+        report["wanderfull_missing_count"] = cdp.eval("window.__nx.formulaMissingCount(window.__nx.committed.formulas.find(f=>f.id==='wanderfull'), window.__nx.committed)")
+        paths.append(cdp.shot("03_wanderfull_only_warnings.png"))
         cdp.eval("document.querySelector('nav button[data-page=\"formulas\"]').click()")
         time.sleep(0.8)
-        paths.append(cdp.shot("01_neo_profor_start.png"))
-        cdp.eval("(()=>{const f=window.__nx.draft.formulas.find(x=>x.id==='neo-taban');const m=window.__nx.draft.materials.find(x=>x.code==='PROFOR');const l=f.lines.find(x=>x.materialId===m.id);l.kg='2';window.__nx.dirty.formulas=true;window.__nx.renderFormulas();window.__nx.renderCalc()})()")
-        time.sleep(0.5)
-        paths.append(cdp.shot("02_profor_2_dirty_preview.png"))
-        cdp.eval("window.__nx.savePage('formulas')")
-        time.sleep(2)
-        paths.append(cdp.shot("03_save_success_timestamp.png"))
-        cdp.eval("document.querySelector('nav button[data-page=\"calc\"]').click()")
-        time.sleep(1.5)
-        paths.append(cdp.shot("04_calc_new_total.png"))
-        report = {
-            "total_kg": cdp.eval("window.__nx.formulaTotalKg(window.__nx.committed.formulas.find(f=>f.id==='neo-taban'))"),
-            "screenshots": paths,
-        }
+        badges = cdp.eval("Array.from(document.querySelectorAll('.formula-miss-badge')).map(x=>x.textContent)")
+        report["card_badges"] = badges
+        paths.append(cdp.shot("04_formula_card_badges.png", 1366, 768))
+        paths.append(cdp.shot("05_formula_cards_1920.png", 1920, 1080))
+        report["screenshots"] = paths
         with open(os.path.join(SHOT, "report.json"), "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=2)
-        print(json.dumps(report, indent=2))
+            json.dump(report, f, indent=2, ensure_ascii=False)
+        print(json.dumps(report, indent=2, ensure_ascii=False))
     finally:
         cdp.close()
         edge.terminate()

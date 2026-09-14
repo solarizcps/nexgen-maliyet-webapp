@@ -17,6 +17,46 @@ TEST_USERNAME = "altan"
 TEST_PASSWORD = "104099"
 
 
+def _login_body_json():
+    import json
+
+    return json.dumps({"username": TEST_USERNAME, "password": TEST_PASSWORD})
+
+
+def browser_login_eval_script():
+    body = _login_body_json()
+    return (
+        "(async()=>{const csrf=window.__LOGIN_CSRF;"
+        "await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json',"
+        "'X-CSRF-Token':csrf},body:"
+        + body
+        + "});location.href='/'})()"
+    )
+
+
+def browser_login_eval_script_check_ok():
+    body = _login_body_json()
+    return (
+        "(async()=>{const csrf=window.__LOGIN_CSRF;"
+        "const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json',"
+        "'X-CSRF-Token':csrf},body:"
+        + body
+        + "});if((await r.json()).ok) location.href='/';})()"
+    )
+
+
+def browser_login_eval_script_csrf_api():
+    body = _login_body_json()
+    return (
+        "(async()=>{const csrfResp=await fetch('/api/auth/csrf');"
+        "const csrfBody=await csrfResp.json();"
+        "await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json',"
+        "'X-CSRF-Token':csrfBody.csrfToken},body:"
+        + body
+        + "});location.href='/'})()"
+    )
+
+
 def setup_test_app(prefix="nexgen-test-"):
     tmp = tempfile.mkdtemp(prefix=prefix)
     db = os.path.join(tmp, "test.db")

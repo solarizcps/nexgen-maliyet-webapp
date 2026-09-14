@@ -1,0 +1,55 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime database and secrets
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+.nexgen_secret
+*.secret
+.env
+.env.*
+!.env.example
+
+# Logs and runtime files
+logs/
+*.log
+*.pid
+*.lock
+
+# Backups and recovery
+backup/
+backups/
+recovery/
+*_backup/
+*_backups/
+
+# Screenshots and generated reports
+screenshots*/
+screenshots_*/
+test-results/
+playwright-report/
+report.json
+*_report.json
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak

@@ -1,0 +1,364 @@
+{
+  "productionKg": 420000,
+  "usdTry": 42.45,
+  "materials": [
+    {
+      "code": "EVA-18",
+      "name": "EVA 18",
+      "cash": 1.9,
+      "monthly": 0,
+      "id": "mat-mu0w8ani-zvilsw",
+      "category": "Ana Malzeme"
+    },
+    {
+      "code": "EVA-22",
+      "name": "EVA 22",
+      "cash": 2.54,
+      "monthly": 4,
+      "id": "mat-mu0w8ani-7c19rx",
+      "category": "Ana Malzeme"
+    },
+    {
+      "code": "EVA-28",
+      "name": "EVA 28",
+      "cash": 2.05,
+      "monthly": 0,
+      "id": "mat-mu0w8ani-wpib93",
+      "category": "Ana Malzeme"
+    },
+    {
+      "code": "RECYCLED",
+      "name": "Recycled EVA",
+      "cash": 0.5,
+      "monthly": 4,
+      "id": "mat-mu0w8ani-bnp0i3",
+      "category": "Ana Malzeme"
+    },
+    {
+      "code": "ZNO",
+      "name": "ZnO",
+      "cash": 2.8,
+      "monthly": 1.34,
+      "id": "mat-mu0w8ani-6sm1xt",
+      "category": "Katkı"
+    },
+    {
+      "code": "STEARIC",
+      "name": "Stearic Acid",
+      "cash": 1.75,
+      "monthly": 4.36,
+      "id": "mat-mu0w8ani-vdjksc",
+      "category": "Katkı"
+    },
+    {
+      "code": "ZNST",
+      "name": "Zinc Stearate",
+      "cash": 2.1,
+      "monthly": 1.49,
+      "id": "mat-mu0w8ani-j1djo8",
+      "category": "Katkı"
+    },
+    {
+      "code": "DCP99",
+      "name": "DCP 99",
+      "cash": 3.95,
+      "monthly": 1.99,
+      "id": "mat-mu0w8ani-5n5bq9",
+      "category": "Katkı"
+    },
+    {
+      "code": "POE-565",
+      "name": "POE LG565",
+      "cash": 2.05,
+      "monthly": 0,
+      "id": "mat-mu0w8ani-t18uot",
+      "category": "Ana Malzeme"
+    },
+    {
+      "code": "TPE-8201",
+      "name": "TPE 8201",
+      "cash": 2,
+      "monthly": 7.19,
+      "id": "mat-mu0w8ani-8z4yr8",
+      "category": "Ana Malzeme"
+    },
+    {
+      "code": "PROFOR",
+      "name": "PROFOR",
+      "cash": 3.65,
+      "monthly": 0,
+      "id": "mat-mu0w8anj-bpc19a",
+      "category": "Ana Malzeme"
+    },
+    {
+      "code": "CACO3",
+      "name": "CaCO3",
+      "cash": 0.13,
+      "monthly": 1.92,
+      "id": "mat-mu0w8anj-9s9t3i",
+      "category": "Katkı"
+    },
+    {
+      "code": "TIO2",
+      "name": "TiO2",
+      "cash": 3,
+      "monthly": 2,
+      "id": "mat-mu0w8anj-uszbcn",
+      "category": "Boya"
+    },
+    {
+      "code": "PEWAX",
+      "name": "PE Wax",
+      "cash": 2.15,
+      "monthly": 3.95,
+      "id": "mat-mu0w8anj-g35cm0",
+      "category": "Katkı"
+    },
+    {
+      "code": "TAIC",
+      "name": "TAIC",
+      "cash": 6,
+      "monthly": 2.08,
+      "id": "mat-mu0w8anj-z6mijp",
+      "category": "Katkı"
+    },
+    {
+      "code": "NYPAR",
+      "name": "NYPAR-315",
+      "cash": 1.9,
+      "monthly": 9.54,
+      "id": "mat-mu0w8anj-2pg48g",
+      "category": "Katkı"
+    },
+    {
+      "code": "PR122",
+      "name": "Demir oksit kırmızı",
+      "cash": 1.7,
+      "monthly": 0,
+      "id": "mat-mu0w8anj-is8r7l",
+      "category": "Boya"
+    },
+    {
+      "code": "BLK550",
+      "name": "Black N550",
+      "cash": 1.2,
+      "monthly": 0,
+      "id": "mat-mu0w8anj-fop8dz",
+      "category": "Boya"
+    }
+  ],
+  "expenses": [
+    {
+      "name": "Kira",
+      "amount": 506444,
+      "rate": 100
+    },
+    {
+      "name": "Maaş",
+      "amount": 419914,
+      "rate": 100
+    },
+    {
+      "name": "SGK",
+      "amount": 48200,
+      "rate": 100
+    },
+    {
+      "name": "Elektrik",
+      "amount": 220000,
+      "rate": 100
+    },
+    {
+      "name": "Yemek",
+      "amount": 70000,
+      "rate": 100
+    },
+    {
+      "name": "Servis",
+      "amount": 50000,
+      "rate": 100
+    },
+    {
+      "name": "Sigorta",
+      "amount": 33532,
+      "rate": 100
+    },
+    {
+      "name": "Danışmanlık",
+      "amount": 36230,
+      "rate": 100
+    },
+    {
+      "name": "Bakım ve diğer",
+      "amount": 108000,
+      "rate": 100
+    }
+  ],
+  "formulas": [
+    {
+      "id": "aym",
+      "company": "AYM",
+      "name": "Örnek EVA Formülü",
+      "months": 6,
+      "profit": 20,
+      "lines": [
+        {
+          "code": "EVA-18",
+          "kg": 35,
+          "materialId": "mat-mu0w8ani-zvilsw"
+        },
+        {
+          "code": "EVA-28",
+          "kg": 18,
+          "materialId": "mat-mu0w8ani-wpib93"
+        },
+        {
+          "code": "ZNO",
+          "kg": 0.85,
+          "materialId": "mat-mu0w8ani-6sm1xt"
+        },
+        {
+          "code": "STEARIC",
+          "kg": 0.4,
+          "materialId": "mat-mu0w8ani-vdjksc"
+        },
+        {
+          "code": "ZNST",
+          "kg": 0.65,
+          "materialId": "mat-mu0w8ani-j1djo8"
+        },
+        {
+          "code": "DCP99",
+          "kg": 0.7,
+          "materialId": "mat-mu0w8ani-5n5bq9"
+        },
+        {
+          "code": "POE-565",
+          "kg": 6,
+          "materialId": "mat-mu0w8ani-t18uot"
+        },
+        {
+          "code": "TPE-8201",
+          "kg": 3,
+          "materialId": "mat-mu0w8ani-8z4yr8"
+        },
+        {
+          "code": "PROFOR",
+          "kg": 1.25,
+          "materialId": "mat-mu0w8anj-bpc19a"
+        },
+        {
+          "code": "CACO3",
+          "kg": 17,
+          "materialId": "mat-mu0w8anj-9s9t3i"
+        },
+        {
+          "code": "TIO2",
+          "kg": 2.4,
+          "materialId": "mat-mu0w8anj-uszbcn"
+        },
+        {
+          "code": "PEWAX",
+          "kg": 0.8,
+          "materialId": "mat-mu0w8anj-g35cm0"
+        },
+        {
+          "code": "TAIC",
+          "kg": 0.15,
+          "materialId": "mat-mu0w8anj-z6mijp"
+        },
+        {
+          "code": "NYPAR",
+          "kg": 1,
+          "materialId": "mat-mu0w8anj-2pg48g"
+        },
+        {
+          "code": "PR122",
+          "kg": 0.006,
+          "materialId": "mat-mu0w8anj-is8r7l"
+        },
+        {
+          "code": "BLK550",
+          "kg": 0.02,
+          "materialId": "mat-mu0w8anj-fop8dz"
+        }
+      ],
+      "monthlyRate": 0
+    },
+    {
+      "id": "darkir",
+      "company": "DARKIR",
+      "name": "Örnek EVA Formülü",
+      "months": 6,
+      "profit": 20,
+      "lines": [
+        {
+          "code": "EVA-22",
+          "kg": 32,
+          "materialId": "mat-mu0w8ani-7c19rx"
+        },
+        {
+          "code": "EVA-28",
+          "kg": 20,
+          "materialId": "mat-mu0w8ani-wpib93"
+        },
+        {
+          "code": "RECYCLED",
+          "kg": 10,
+          "materialId": "mat-mu0w8ani-bnp0i3"
+        },
+        {
+          "code": "ZNO",
+          "kg": 0.9,
+          "materialId": "mat-mu0w8ani-6sm1xt"
+        },
+        {
+          "code": "DCP99",
+          "kg": 0.75,
+          "materialId": "mat-mu0w8ani-5n5bq9"
+        },
+        {
+          "code": "POE-565",
+          "kg": 5,
+          "materialId": "mat-mu0w8ani-t18uot"
+        },
+        {
+          "code": "TPE-8201",
+          "kg": 4,
+          "materialId": "mat-mu0w8ani-8z4yr8"
+        },
+        {
+          "code": "PROFOR",
+          "kg": 1.3,
+          "materialId": "mat-mu0w8anj-bpc19a"
+        },
+        {
+          "code": "CACO3",
+          "kg": 20,
+          "materialId": "mat-mu0w8anj-9s9t3i"
+        },
+        {
+          "code": "TIO2",
+          "kg": 1.8,
+          "materialId": "mat-mu0w8anj-uszbcn"
+        },
+        {
+          "code": "PEWAX",
+          "kg": 0.8,
+          "materialId": "mat-mu0w8anj-g35cm0"
+        },
+        {
+          "code": "TAIC",
+          "kg": 0.18,
+          "materialId": "mat-mu0w8anj-z6mijp"
+        }
+      ],
+      "monthlyRate": 0
+    }
+  ],
+  "meta": {
+    "migratedMaterialIds": true,
+    "migratedAt": "2026-09-14T07:00:14.959Z"
+  },
+  "savedAt": {}
+}

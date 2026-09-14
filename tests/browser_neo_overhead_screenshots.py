@@ -1,30 +1,21 @@
 # -*- coding: utf-8 -*-
-"""Browser screenshots for kg save fix (local server required)."""
-import base64
-import json
-import os
-import subprocess
-import sys
-import time
-import urllib.request
-
+import base64, json, os, subprocess, sys, time, urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from tests.test_helpers import browser_login_eval_script
-
+import config
 try:
     import websocket
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "websocket-client", "-q"])
     import websocket
 
-PORT = int(os.environ.get("NEXGEN_TEST_PORT", "2345"))
-BASE = f"http://127.0.0.1:{PORT}"
-SHOT = os.path.join(ROOT, "screenshots_kg_save_fix")
-CDP_PORT = 9234
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-PROFILE = os.path.join(os.environ.get("TEMP", "."), "nexgen-kg-save-shots")
+BASE = f"http://{config.HOST}:{config.PORT}"
+SHOT = os.path.join(ROOT, "screenshots_neo_overhead")
+CDP_PORT = 9230
+PROFILE = os.path.join(os.environ.get("TEMP", "."), "nexgen-neo-shots")
 
 
 class CDP:
@@ -57,42 +48,39 @@ class CDP:
 
 def main():
     os.makedirs(SHOT, exist_ok=True)
-    edge = subprocess.Popen(
-        [EDGE, f"--remote-debugging-port={CDP_PORT}", "--remote-allow-origins=*", f"--user-data-dir={PROFILE}", BASE + "/login"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    paths = []
+    edge = subprocess.Popen([EDGE, f"--remote-debugging-port={CDP_PORT}", "--remote-allow-origins=*", f"--user-data-dir={PROFILE}", BASE + "/login"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(3)
     cdp = CDP()
-    paths = []
     try:
         cdp.eval(browser_login_eval_script())
         for _ in range(40):
             time.sleep(0.25)
-            if cdp.eval("!!window.__nx && window.__nx.loadState==='ready'"):
+            if cdp.eval("!!window.__nx"):
                 break
-        cdp.eval("document.querySelector('nav button[data-page=\"formulas\"]').click()")
-        time.sleep(0.8)
-        paths.append(cdp.shot("01_neo_profor_start.png"))
-        cdp.eval("(()=>{const f=window.__nx.draft.formulas.find(x=>x.id==='neo-taban');const m=window.__nx.draft.materials.find(x=>x.code==='PROFOR');const l=f.lines.find(x=>x.materialId===m.id);l.kg='2';window.__nx.dirty.formulas=true;window.__nx.renderFormulas();window.__nx.renderCalc()})()")
-        time.sleep(0.5)
-        paths.append(cdp.shot("02_profor_2_dirty_preview.png"))
-        cdp.eval("window.__nx.savePage('formulas')")
+        cdp.eval("document.getElementById('calcFormula').value='neo-taban';document.getElementById('calcFormula').dispatchEvent(new Event('change'))")
         time.sleep(2)
-        paths.append(cdp.shot("03_save_success_timestamp.png"))
+        paths.append(cdp.shot("01_neo_formula_selected.png"))
+        cdp.eval("document.querySelector('nav button[data-page=\"formulas\"]').click()")
+        time.sleep(1)
+        cdp.eval("document.querySelector('#formulaList button[data-f=\"neo-taban\"]')?.click()")
+        time.sleep(0.8)
+        paths.append(cdp.shot("02_neo_formulas_12_lines.png"))
         cdp.eval("document.querySelector('nav button[data-page=\"calc\"]').click()")
-        time.sleep(1.5)
-        paths.append(cdp.shot("04_calc_new_total.png"))
-        report = {
-            "total_kg": cdp.eval("window.__nx.formulaTotalKg(window.__nx.committed.formulas.find(f=>f.id==='neo-taban'))"),
-            "screenshots": paths,
-        }
-        with open(os.path.join(SHOT, "report.json"), "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=2)
-        print(json.dumps(report, indent=2))
+        time.sleep(1.2)
+        paths.append(cdp.shot("03_neo_cost_summary.png"))
+        cdp.eval("document.querySelector('nav button[data-page=\"expenses\"]').click()")
+        time.sleep(0.8)
+        paths.append(cdp.shot("04_overhead_detail.png"))
+        cdp.eval("document.querySelector('nav button[data-page=\"calc\"]').click();document.getElementById('calcFormula').value='aym';document.getElementById('calcFormula').dispatchEvent(new Event('change'))")
+        time.sleep(1.2)
+        paths.append(cdp.shot("05_aym_valid_regression.png"))
     finally:
         cdp.close()
         edge.terminate()
+    with open(os.path.join(SHOT, "report.json"), "w", encoding="utf-8") as f:
+        json.dump({"screenshots": paths}, f, indent=2)
+    print(json.dumps({"screenshots": paths}, indent=2))
 
 
 if __name__ == "__main__":

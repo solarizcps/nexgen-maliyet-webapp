@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Deploy task-restart-race tests + mock dry-run."""
+import hashlib
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -11,58 +11,49 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+PRODUCTION_FILES = [
+    "app.py",
+    "config.py",
+    "wsgi.py",
+    "services/repository.py",
+    "static/js/app.js",
+    "scripts/production/NexGen-ProcessControl.ps1",
+    "scripts/production/Stop-NexGen-2333.ps1",
+]
 
-def _build_flat_package(target_dir):
-    files = [
-        "app.py",
-        "config.py",
-        "wsgi.py",
-        "services/repository.py",
-        "static/js/app.js",
-    ]
-    for rel in files:
+
+def _sha256(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest().upper()
+
+
+def _build_v3_package(target_dir):
+    for rel in PRODUCTION_FILES:
         dst = os.path.join(target_dir, rel.replace("/", os.sep))
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(os.path.join(ROOT, rel.replace("/", os.sep)), dst)
-    with open(
-        os.path.join(ROOT, "scripts", "production", "NexGen-ProcessControl.ps1"),
-        encoding="utf-8",
-    ) as f:
-        pc = f.read()
-    with open(
+    shutil.copy2(
         os.path.join(ROOT, "scripts", "deploy", "Deploy-NexGen-KG-Fix.ps1"),
-        encoding="utf-8",
-    ) as f:
-        dep = f.read()
-    param_m = re.search(r"(?s)(param\s*\(.*?\)\s*)", dep)
-    param_block = param_m.group(1) if param_m else ""
-    dep_body = re.sub(r"(?s)^#requires[^\n]*\n", "", dep)
-    dep_body = re.sub(r"(?s)^param\s*\(.*?\)\s*", "", dep_body, count=1)
-    dep_body = re.sub(
-        r"\$pcLoaded = \$false.*?if \(-not \$pcLoaded\) \{\s*throw.*?\}\n",
-        "",
-        dep_body,
-        count=1,
-        flags=re.DOTALL,
+        os.path.join(target_dir, "Deploy-NexGen-KG-Fix.ps1"),
     )
-    deploy_path = os.path.join(target_dir, "Deploy-NexGen-KG-Fix.ps1")
-    with open(deploy_path, "w", encoding="utf-8") as f:
-        f.write("#requires -Version 5.1\n")
-        f.write(param_block)
-        f.write(pc)
-        f.write("\n")
-        f.write(dep_body)
+    shutil.copy2(
+        os.path.join(ROOT, "scripts", "deploy", "ROLLBACK.txt"),
+        os.path.join(target_dir, "ROLLBACK.txt"),
+    )
     entries = []
-    for rel in files:
+    for rel in PRODUCTION_FILES:
         path = os.path.join(target_dir, rel.replace("/", os.sep))
-        import hashlib
-
-        h = hashlib.sha256(open(path, "rb").read()).hexdigest().upper()
-        entries.append({"path": rel.replace("\\", "/"), "sha256": h})
+        entries.append({"path": rel.replace("\\", "/"), "sha256": _sha256(path)})
+    deploy_path = os.path.join(target_dir, "Deploy-NexGen-KG-Fix.ps1")
     manifest = {
         "version": "3.0.3-kg-save",
+        "package_revision": "V3-complete-task-race-fix",
         "git_commit": "mock-test",
+        "production_files_count": 7,
+        "deploy_helper_files_count": 3,
+        "total_files_count": 10,
         "files": entries,
+        "deploy_script": {"path": "Deploy-NexGen-KG-Fix.ps1", "sha256": _sha256(deploy_path)},
         "DB_INCLUDED": False,
         "SECRET_INCLUDED": False,
         "CPS_INCLUDED": False,
@@ -88,27 +79,51 @@ class DeployTaskRaceTests(unittest.TestCase):
     def test_powershell_suite_passed(self):
         self.assertIn("DEPLOY_TESTS_FAILED=0", self.ps_output)
 
+    def test_v3_package_inventory(self):
+        pkg = tempfile.mkdtemp(prefix="nexgen-v3-inventory-")
+        try:
+            _build_v3_package(pkg)
+            expected = {
+                "app.py",
+                "config.py",
+                "wsgi.py",
+                os.path.join("services", "repository.py"),
+                os.path.join("static", "js", "app.js"),
+                os.path.join("scripts", "production", "NexGen-ProcessControl.ps1"),
+                os.path.join("scripts", "production", "Stop-NexGen-2333.ps1"),
+                "manifest.json",
+                "Deploy-NexGen-KG-Fix.ps1",
+                "ROLLBACK.txt",
+            }
+            found = set()
+            for dirpath, _, filenames in os.walk(pkg):
+                for name in filenames:
+                    rel = os.path.relpath(os.path.join(dirpath, name), pkg)
+                    found.add(rel.replace("\\", "/").replace("/", os.sep))
+            self.assertEqual(len(found), 10)
+            for item in expected:
+                self.assertIn(item.replace("/", os.sep), found)
+            with open(os.path.join(pkg, "manifest.json"), encoding="utf-8") as f:
+                manifest = json.load(f)
+            self.assertEqual(manifest["production_files_count"], 7)
+            self.assertEqual(len(manifest["files"]), 7)
+        finally:
+            shutil.rmtree(pkg, ignore_errors=True)
+
     def test_mock_deploy_dry_run(self):
         mock = tempfile.mkdtemp(prefix="nexgen-mock-deploy-")
         pkg = tempfile.mkdtemp(prefix="nexgen-pkg-flat-")
         try:
-            for sub in ("data", "services", "static/js", "scripts", "backup"):
+            for sub in ("data", "services", "static/js", "scripts/production", "backup"):
                 os.makedirs(os.path.join(mock, sub.replace("/", os.sep)), exist_ok=True)
             shutil.copy2(
                 os.path.join(ROOT, "scripts", "sqlite_online_backup.py"),
                 os.path.join(mock, "scripts", "sqlite_online_backup.py"),
             )
-            for rel in (
-                "app.py",
-                "config.py",
-                "wsgi.py",
-                "services/repository.py",
-                "static/js/app.js",
-            ):
-                shutil.copy2(
-                    os.path.join(ROOT, rel.replace("/", os.sep)),
-                    os.path.join(mock, rel.replace("/", os.sep)),
-                )
+            for rel in PRODUCTION_FILES:
+                dst = os.path.join(mock, rel.replace("/", os.sep))
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(os.path.join(ROOT, rel.replace("/", os.sep)), dst)
             with open(os.path.join(mock, "data", ".nexgen_secret"), "w", encoding="utf-8") as f:
                 f.write("x" * 64)
 
@@ -125,7 +140,7 @@ class DeployTaskRaceTests(unittest.TestCase):
             init_db(force=True)
             import_localstorage(force_recreate=False)
 
-            _build_flat_package(pkg)
+            _build_v3_package(pkg)
             r = subprocess.run(
                 [
                     "powershell",
@@ -144,8 +159,31 @@ class DeployTaskRaceTests(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertIn("DEPLOY_PASS", r.stdout)
             self.assertIn('"DEPLOY_RESULT":  "PASS"', r.stdout.replace("'", '"'))
+            self.assertIn("scripts/production/NexGen-ProcessControl.ps1", r.stdout)
         finally:
             shutil.rmtree(mock, ignore_errors=True)
+            shutil.rmtree(pkg, ignore_errors=True)
+
+    def test_validate_only_v3(self):
+        pkg = tempfile.mkdtemp(prefix="nexgen-v3-validate-")
+        try:
+            _build_v3_package(pkg)
+            r = subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    os.path.join(pkg, "Deploy-NexGen-KG-Fix.ps1"),
+                    "-ValidateOnly",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn("PACKAGE_VALIDATE_PASS", r.stdout)
+        finally:
             shutil.rmtree(pkg, ignore_errors=True)
 
 

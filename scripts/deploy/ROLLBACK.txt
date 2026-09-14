@@ -14,7 +14,8 @@ Manual steps if needed:
    Do NOT use taskkill /IM python.exe
    Do NOT stop port 8080 (CPS)
 4. Confirm port 2333 is free before restoring files.
-5. Restore five code files from backup\kg_save_fix_deploy_<timestamp>\code\
+5. Restore seven production files from backup\kg_save_fix_deploy_<timestamp>\code\
+   (backup_manifest.json tracks files that were absent before deploy)
 6. DB restore only if deploy modified DB (this release should NOT).
 7. Start-ScheduledTask -TaskName "NexGen-Maliyet-2333"
 8. Verify http://127.0.0.1:2333/api/health status=ok

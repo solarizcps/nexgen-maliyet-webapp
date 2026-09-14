@@ -16,6 +16,7 @@ $CanonicalRoot = if ($TestProductionRoot) { $TestProductionRoot } else { "C:\nex
 
 $pcLoaded = $false
 foreach ($candidate in @(
+    (Join-Path $ReleaseRoot "scripts\production\NexGen-ProcessControl.ps1"),
     (Join-Path $ReleaseRoot "NexGen-ProcessControl.ps1"),
     (Join-Path $CanonicalRoot "scripts\production\NexGen-ProcessControl.ps1"),
     (Join-Path (Split-Path $PSScriptRoot -Parent) "production\NexGen-ProcessControl.ps1")
@@ -143,6 +144,53 @@ function Get-HealthSnapshot([string]$Label) {
     }
 }
 
+function Get-DeployFileHash([string]$RelPath) {
+    $norm = $RelPath -replace "\\", "/"
+    $item = $manifest.files | Where-Object { ($_.path -replace "\\", "/") -eq $norm } | Select-Object -First 1
+    if (-not $item) { throw "Manifest hash missing for $RelPath" }
+    return $item.sha256.ToUpper()
+}
+
+function Restore-ProductionFilesFromBackup([string]$CodeBackup) {
+    $manifestPath = Join-Path $CodeBackup "backup_manifest.json"
+    if (-not (Test-Path $manifestPath)) { throw "backup_manifest.json missing in $CodeBackup" }
+    $backupManifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+    $restoreReport = @()
+    foreach ($entry in $backupManifest.files) {
+        $rel = $entry.path -replace "/", "\"
+        $dst = Join-Path $CanonicalRoot $rel
+        $row = [ordered]@{ path = $entry.path; action = $null; previously_absent = [bool]$entry.previously_absent }
+        if ($entry.previously_absent) {
+            if (Test-Path $dst) {
+                $deployHash = Get-DeployFileHash $rel
+                $currentHash = Get-Sha256 $dst
+                if ($currentHash -ne $deployHash) {
+                    throw "Refusing to remove $rel - hash does not match deployed package"
+                }
+                Remove-Item -LiteralPath $dst -Force
+                $row.action = "removed_deploy_created"
+            } else {
+                $row.action = "already_absent"
+            }
+        } else {
+            $src = Join-Path $CodeBackup $rel
+            if (-not (Test-Path $src)) { throw "Backup missing for $rel" }
+            $dstDir = Split-Path $dst -Parent
+            if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Force -Path $dstDir | Out-Null }
+            Copy-Item $src $dst -Force
+            $bakHash = Get-Sha256 $src
+            $prodHash = Get-Sha256 $dst
+            if ($bakHash -ne $prodHash) { throw "Rollback hash mismatch for $rel" }
+            if ($entry.sha256 -and $prodHash -ne $entry.sha256.ToUpper()) {
+                throw "Rollback hash mismatch vs backup manifest for $rel"
+            }
+            $row.action = "restored"
+        }
+        $restoreReport += $row
+    }
+    return $restoreReport
+}
+
 function Invoke-Rollback([string]$BackupRoot, [string]$Reason, [string]$ExpectedRollbackVersion) {
     Write-Report "rollback_reason" $Reason
     Write-Host "ROLLBACK: $Reason"
@@ -152,18 +200,8 @@ function Invoke-Rollback([string]$BackupRoot, [string]$Reason, [string]$Expected
         Write-Report "rollback_stop_error" $_.Exception.Message
     }
     $codeBackup = Join-Path $BackupRoot "code"
-    $releaseFiles = @("app.py", "config.py", "wsgi.py", "services\repository.py", "static\js\app.js")
-    foreach ($rel in $releaseFiles) {
-        $src = Join-Path $codeBackup $rel
-        $dst = Join-Path $CanonicalRoot $rel
-        if (-not (Test-Path $src)) { continue }
-        $dstDir = Split-Path $dst -Parent
-        if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Force -Path $dstDir | Out-Null }
-        Copy-Item $src $dst -Force
-        $bakHash = Get-Sha256 $src
-        $prodHash = Get-Sha256 $dst
-        if ($bakHash -ne $prodHash) { throw "Rollback hash mismatch for $rel" }
-    }
+    $restoreReport = Restore-ProductionFilesFromBackup $codeBackup
+    Write-Report "rollback_file_restore" $restoreReport
     Start-NexGenTaskSafely -TaskName $TaskName -SkipScheduledTask:$SkipScheduledTask | Out-Null
     $deadline = (Get-Date).AddSeconds(30)
     $rbHealth = $null
@@ -191,7 +229,9 @@ $ReleaseFiles = @(
     @{ Rel = "config.py"; Prod = "config.py" },
     @{ Rel = "wsgi.py"; Prod = "wsgi.py" },
     @{ Rel = "services\repository.py"; Prod = "services\repository.py" },
-    @{ Rel = "static\js\app.js"; Prod = "static\js\app.js" }
+    @{ Rel = "static\js\app.js"; Prod = "static\js\app.js" },
+    @{ Rel = "scripts\production\NexGen-ProcessControl.ps1"; Prod = "scripts\production\NexGen-ProcessControl.ps1" },
+    @{ Rel = "scripts\production\Stop-NexGen-2333.ps1"; Prod = "scripts\production\Stop-NexGen-2333.ps1" }
 )
 
 try {
@@ -253,12 +293,27 @@ try {
     $dataBackup = Join-Path $backupRoot "data"
     New-Item -ItemType Directory -Force -Path $codeBackup, $dataBackup | Out-Null
 
+    $backupManifest = [ordered]@{ files = @() }
     foreach ($f in $ReleaseFiles) {
+        $prodPath = Join-Path $CanonicalRoot $f.Prod
         $dest = Join-Path $codeBackup $f.Prod
         $destDir = Split-Path $dest -Parent
         if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Force -Path $destDir | Out-Null }
-        Copy-Item (Join-Path $CanonicalRoot $f.Prod) $dest -Force
+        $entry = [ordered]@{
+            path = ($f.Prod -replace "\\", "/")
+            previously_absent = $false
+            sha256 = $null
+        }
+        if (Test-Path $prodPath) {
+            Copy-Item $prodPath $dest -Force
+            $entry.sha256 = Get-Sha256 $prodPath
+        } else {
+            $entry.previously_absent = $true
+        }
+        $backupManifest.files += $entry
     }
+    $backupManifest | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $codeBackup "backup_manifest.json") -Encoding UTF8
+    Write-Report "backup_manifest" $backupManifest
     Copy-Item $secretPath (Join-Path $dataBackup ".nexgen_secret") -Force
     $destDb = Join-Path $dataBackup "nexgen_local.db"
     $bakMeta = Invoke-SqliteOnlineBackup $dbPath $destDb

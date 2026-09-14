@@ -1,33 +1,19 @@
-# Stop verified NEXGEN production process on port 2333
+# Stop NexGen production: Scheduled Task first, then verified 2333 listener only.
 $ErrorActionPreference = "Stop"
+$Root = "C:\nexgen_maliyet"
+$TaskName = "NexGen-Maliyet-2333"
 $Port = 2333
-$HostAddr = "127.0.0.1"
 
-function Test-NexGenHealth([string]$BaseUrl) {
-    try {
-        $resp = Invoke-WebRequest -Uri "$BaseUrl/api/health" -UseBasicParsing -TimeoutSec 3
-        return ($resp.Content -match '"app"\s*:\s*"NEXGEN')
-    } catch { return $false }
+. (Join-Path $PSScriptRoot "NexGen-ProcessControl.ps1")
+
+$cpsPid = Get-Cps8080Pid
+Write-Host "CPS_8080_PID=$cpsPid"
+
+$result = Stop-NexGenTaskSafely -ProductionRoot $Root -TaskName $TaskName -Port $Port
+Write-Host "TASK_STOPPED=$($result.task_stopped) TASK_READY=$($result.task_ready) PORT_FREE=$($result.port_free)"
+if ($result.stopped_pids.Count -gt 0) {
+    Write-Host "STOPPED_PIDS=$($result.stopped_pids -join ',')"
+} else {
+    Write-Host "No NexGen listener on port $Port"
 }
-
-$conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $conn) {
-    Write-Host "No listener on port $Port"
-    exit 0
-}
-
-$targetPid = [int]$conn.OwningProcess
-$baseUrl = "http://${HostAddr}:$Port"
-if (-not (Test-NexGenHealth $baseUrl)) {
-    Write-Error "PID $targetPid is not NEXGEN. Refusing to stop."
-    exit 1
-}
-
-$cpsPid = (Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1).OwningProcess
-if ($targetPid -eq $cpsPid) {
-    Write-Error "PID matches CPS 8080. Refusing to stop."
-    exit 1
-}
-
-Stop-Process -Id $targetPid -Force
-Write-Host "NEXGEN production stopped PID=$targetPid"
+exit 0

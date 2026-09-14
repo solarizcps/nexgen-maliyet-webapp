@@ -1,0 +1,21 @@
+NEXGEN KG Save/Calc Fix - Rollback (task-restart-race safe)
+============================================================
+
+Automatic rollback is built into Deploy-NexGen-KG-Fix.ps1.
+
+Manual steps if needed:
+
+1. Elevated PowerShell on server.
+2. Stop Scheduled Task FIRST:
+   Stop-ScheduledTask -TaskName "NexGen-Maliyet-2333"
+   Wait until task state is Ready (max 30s).
+3. Stop verified NexGen only:
+   C:\nexgen_maliyet\scripts\production\Stop-NexGen-2333.ps1
+   Do NOT use taskkill /IM python.exe
+   Do NOT stop port 8080 (CPS)
+4. Confirm port 2333 is free before restoring files.
+5. Restore five code files from backup\kg_save_fix_deploy_<timestamp>\code\
+6. DB restore only if deploy modified DB (this release should NOT).
+7. Start-ScheduledTask -TaskName "NexGen-Maliyet-2333"
+8. Verify http://127.0.0.1:2333/api/health status=ok
+9. Do NOT restart CPS 8080
